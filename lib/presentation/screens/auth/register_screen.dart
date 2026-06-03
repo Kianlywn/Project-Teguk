@@ -84,6 +84,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (!mounted) return;
 
       if (result['success'] == true) {
+        if (_selectedRole == 'User') {
+          await _authRepository.setProfileSetupComplete(false);
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Pendaftaran berhasil! Silakan login.'),

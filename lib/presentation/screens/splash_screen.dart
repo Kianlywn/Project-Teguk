@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:teguk/core/utils/permission_helper.dart';
+import 'package:teguk/data/repositories/auth_repository.dart';
 import 'package:teguk/presentation/screens/auth/login_screen.dart';
+import 'package:teguk/presentation/screens/dashboard/dashboard_screen.dart';
+import 'package:teguk/presentation/screens/expert/expert_dashboard_screen.dart';
+import 'package:teguk/presentation/screens/onboarding/profile_setup_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -54,9 +58,31 @@ class _SplashScreenState extends State<SplashScreen>
 
     if (!mounted) return;
 
+    final auth = AuthRepository();
+    final token = await auth.getToken();
+
+    final Widget next;
+    if (token == null) {
+      next = const LoginScreen();
+    } else {
+      final role = await auth.getRole();
+      final fullname = await auth.getFullname() ?? 'Pengguna';
+      final profileDone = await auth.isProfileSetupComplete();
+
+      if (role == 'User' && !profileDone) {
+        next = const ProfileSetupScreen();
+      } else if (role == 'HealthExpert') {
+        next = ExpertDashboardScreen(expertName: fullname);
+      } else {
+        next = DashboardScreen(userName: fullname, waterTarget: 2000);
+      }
+    }
+
+    if (!mounted) return;
+
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      MaterialPageRoute(builder: (_) => next),
     );
   }
 

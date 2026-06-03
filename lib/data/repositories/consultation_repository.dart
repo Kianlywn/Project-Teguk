@@ -47,10 +47,10 @@ class ConsultationRepository {
     return null;
   }
 
-  // Create a Consultation
-  Future<Map<String, dynamic>?> createConsultation(String expertId) async {
+  // API mengembalikan string "Consultation created", bukan JSON object
+  Future<bool> createConsultation(String expertId) async {
     final token = await _getToken();
-    if (token == null) return null;
+    if (token == null) return false;
 
     final response = await http.post(
       Uri.parse(ApiConstants.consultation),
@@ -61,10 +61,7 @@ class ConsultationRepository {
       body: jsonEncode({'expertId': expertId}),
     );
 
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body) as Map<String, dynamic>;
-    }
-    return null;
+    return response.statusCode == 200;
   }
 
   // Send Message

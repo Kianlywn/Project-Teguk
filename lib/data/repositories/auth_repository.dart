@@ -25,6 +25,22 @@ class AuthRepository {
     return prefs.getString('role');
   }
 
+  Future<String?> getFullname() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('fullname');
+  }
+
+  /// false = perlu ProfileSetupScreen (setelah register User)
+  Future<bool> isProfileSetupComplete() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool('profile_setup_complete') ?? true;
+  }
+
+  Future<void> setProfileSetupComplete(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('profile_setup_complete', value);
+  }
+
   // Logout — hapus semua session
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();

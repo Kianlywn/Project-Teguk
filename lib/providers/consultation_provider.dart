@@ -54,9 +54,9 @@ class ConsultationProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final result = await _repository.createConsultation(expertId);
-      if (result != null) {
-        await fetchConsultations(); // Refresh list
+      final success = await _repository.createConsultation(expertId);
+      if (success) {
+        await fetchConsultations();
         return true;
       }
     } catch (e) {

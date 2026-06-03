@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:teguk/data/repositories/auth_repository.dart';
 import 'package:teguk/presentation/screens/dashboard/dashboard_screen.dart';
 
 enum ActivityLevel { low, medium, active, veryActive }
@@ -42,10 +43,14 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     return base.toInt();
   }
 
-  void _handleSubmit() {
+  Future<void> _handleSubmit() async {
     if (!_formKey.currentState!.validate()) return;
 
     final waterTarget = _calculateWaterTarget();
+
+    await AuthRepository().setProfileSetupComplete(true);
+
+    if (!mounted) return;
 
     Navigator.pushReplacement(
       context,

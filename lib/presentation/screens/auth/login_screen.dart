@@ -3,6 +3,7 @@ import 'package:teguk/data/repositories/auth_repository.dart';
 import 'package:teguk/presentation/screens/auth/register_screen.dart';
 import 'package:teguk/presentation/screens/dashboard/dashboard_screen.dart';
 import 'package:teguk/presentation/screens/expert/expert_dashboard_screen.dart';
+import 'package:teguk/presentation/screens/onboarding/profile_setup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -46,10 +47,13 @@ class _LoginScreenState extends State<LoginScreen> {
         final fullname = result['fullname'] as String;
 
         if (role == 'User') {
+          final profileDone = await _authRepository.isProfileSetupComplete();
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (_) => DashboardScreen(userName: fullname, waterTarget: 2000),
+              builder: (_) => profileDone
+                  ? DashboardScreen(userName: fullname, waterTarget: 2000)
+                  : const ProfileSetupScreen(),
             ),
           );
         } else if (role == 'HealthExpert') {
