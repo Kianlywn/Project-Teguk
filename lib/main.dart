@@ -3,13 +3,17 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'package:teguk/presentation/screens/splash_screen.dart';
 import 'package:teguk/providers/water_provider.dart';
+import 'package:teguk/providers/weather_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => WaterProvider(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => WaterProvider()),
+        ChangeNotifierProvider(create: (_) => WeatherProvider()),
+      ],
       child: const MyApp(),
     ),
   );

@@ -13,6 +13,7 @@ class WaterProvider extends ChangeNotifier {
   int _target = 2000;
   double _percentage = 0.0;
   bool _isLoading = false;
+  bool _isHistoryLoading = false;
   List<dynamic> _history = [];
 
   int get totalDrink => _totalDrink;
@@ -20,6 +21,7 @@ class WaterProvider extends ChangeNotifier {
   double get percentage => _percentage;
   double get progress => (_percentage / 100).clamp(0.0, 1.0);
   bool get isLoading => _isLoading;
+  bool get isHistoryLoading => _isHistoryLoading;
   List<dynamic> get history => _history;
 
   String _todayKey() {
@@ -97,6 +99,7 @@ class WaterProvider extends ChangeNotifier {
       final success = await _repository.addWater(amountMl);
       if (success) {
         await fetchTodayProgress();
+        await fetchHistory();
         return true;
       }
       _totalDrink = previousTotal;
@@ -116,12 +119,16 @@ class WaterProvider extends ChangeNotifier {
   }
 
   Future<void> fetchHistory() async {
+    _isHistoryLoading = true;
+    notifyListeners();
+
     try {
       final list = await _repository.getHistory();
       if (list != null) _history = list;
     } catch (e) {
       debugPrint('Error fetching history: $e');
     } finally {
+      _isHistoryLoading = false;
       notifyListeners();
     }
   }
