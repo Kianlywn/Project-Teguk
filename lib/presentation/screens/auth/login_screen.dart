@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:teguk/data/repositories/auth_repository.dart';
+import 'package:teguk/data/repositories/user_repository.dart';
 import 'package:teguk/presentation/screens/auth/register_screen.dart';
 import 'package:teguk/presentation/screens/dashboard/dashboard_screen.dart';
 import 'package:teguk/presentation/screens/expert/expert_dashboard_screen.dart';
@@ -20,7 +21,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool _isLoading = false;
   bool _obscurePassword = true;
-  String _selectedRole = 'User'; // toggle state
+  String _selectedRole = 'User';
 
   @override
   void dispose() {
@@ -31,7 +32,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
-
     setState(() => _isLoading = true);
 
     try {
@@ -48,12 +48,24 @@ class _LoginScreenState extends State<LoginScreen> {
 
         if (role == 'User') {
           final profileDone = await _authRepository.isProfileSetupComplete();
+          if (!mounted) return;
+          if (!profileDone) {
+            Navigator.pushReplacement(context,
+                MaterialPageRoute(builder: (_) => const ProfileSetupScreen()));
+            return;
+          }
+          final profile = await UserRepository().getProfile();
+          if (!mounted) return;
+          final waterTarget = profile != null
+              ? (profile['targetWater'] as num).toInt()
+              : 2000;
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (_) => profileDone
-                  ? DashboardScreen(userName: fullname, waterTarget: 2000)
-                  : const ProfileSetupScreen(),
+              builder: (_) => DashboardScreen(
+                userName: fullname,
+                waterTarget: waterTarget,
+              ),
             ),
           );
         } else if (role == 'HealthExpert') {
@@ -77,13 +89,11 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red[400],
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(message),
+      backgroundColor: Colors.red[400],
+      behavior: SnackBarBehavior.floating,
+    ));
   }
 
   @override
@@ -99,60 +109,42 @@ class _LoginScreenState extends State<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 60),
-
-                // Header
                 Center(
                   child: Column(
                     children: [
                       Container(
-                        width: 80,
-                        height: 80,
+                        width: 80, height: 80,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF2196F3).withOpacity(0.1),
+                          color: const Color(0xFF2196F3).withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(
-                          Icons.water_drop,
-                          size: 48,
-                          color: Color(0xFF2196F3),
-                        ),
+                        child: const Icon(Icons.water_drop, size: 48,
+                            color: Color(0xFF2196F3)),
                       ),
                       const SizedBox(height: 16),
-                      const Text(
-                        'Selamat Datang di Teguk',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1A1A1A),
-                        ),
-                      ),
+                      const Text('Selamat Datang di Teguk',
+                          style: TextStyle(
+                              fontSize: 24, fontWeight: FontWeight.bold,
+                              color: Color(0xFF1A1A1A))),
                       const SizedBox(height: 8),
-                      Text(
-                        'Masuk untuk melanjutkan',
-                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                      ),
+                      Text('Masuk untuk melanjutkan',
+                          style: TextStyle(fontSize: 14, color: Colors.grey[600])),
                     ],
                   ),
                 ),
                 const SizedBox(height: 32),
-
-                // Toggle Role
                 Container(
                   decoration: BoxDecoration(
                     color: Colors.grey[100],
                     borderRadius: BorderRadius.circular(12),
                   ),
                   padding: const EdgeInsets.all(4),
-                  child: Row(
-                    children: [
-                      _buildToggleButton('User', Icons.person_outline),
-                      _buildToggleButton('HealthExpert', Icons.medical_services_outlined),
-                    ],
-                  ),
+                  child: Row(children: [
+                    _buildToggleButton('User', Icons.person_outline),
+                    _buildToggleButton('HealthExpert', Icons.medical_services_outlined),
+                  ]),
                 ),
                 const SizedBox(height: 32),
-
-                // Email
                 const Text('Email',
                     style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
@@ -160,36 +152,35 @@ class _LoginScreenState extends State<LoginScreen> {
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   decoration: _inputDecoration('nama@email.com', Icons.email_outlined),
-                  validator: (value) =>
-                      value == null || value.isEmpty ? 'Email tidak boleh kosong' : null,
+                  validator: (v) =>
+                      v == null || v.isEmpty ? 'Email tidak boleh kosong' : null,
                 ),
                 const SizedBox(height: 20),
-
-                // Password
                 const Text('Password',
                     style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _passwordController,
                   obscureText: _obscurePassword,
-                  decoration: _inputDecoration('••••••••', Icons.lock_outline).copyWith(
+                  decoration: _inputDecoration('••••••••', Icons.lock_outline)
+                      .copyWith(
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                        _obscurePassword
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
                         color: Colors.grey,
                       ),
-                      onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                      onPressed: () =>
+                          setState(() => _obscurePassword = !_obscurePassword),
                     ),
                   ),
-                  validator: (value) =>
-                      value == null || value.isEmpty ? 'Password tidak boleh kosong' : null,
+                  validator: (v) =>
+                      v == null || v.isEmpty ? 'Password tidak boleh kosong' : null,
                 ),
                 const SizedBox(height: 32),
-
-                // Tombol Login
                 SizedBox(
-                  width: double.infinity,
-                  height: 52,
+                  width: double.infinity, height: 52,
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _handleLogin,
                     style: ElevatedButton.styleFrom(
@@ -201,36 +192,32 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     child: _isLoading
                         ? const SizedBox(
-                            height: 20,
-                            width: 20,
+                            height: 20, width: 20,
                             child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
+                                color: Colors.white, strokeWidth: 2))
                         : const Text('Masuk',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                            style: TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.w600)),
                   ),
                 ),
                 const SizedBox(height: 24),
-
-                // Link Register
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text('Belum punya akun? ', style: TextStyle(color: Colors.grey[600])),
+                    Text('Belum punya akun? ',
+                        style: TextStyle(color: Colors.grey[600])),
                     GestureDetector(
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => RegisterScreen(initialRole: _selectedRole),
+                          builder: (_) =>
+                              RegisterScreen(initialRole: _selectedRole),
                         ),
                       ),
-                      child: const Text(
-                        'Daftar Sekarang',
-                        style: TextStyle(
-                            color: Color(0xFF2196F3), fontWeight: FontWeight.bold),
-                      ),
+                      child: const Text('Daftar Sekarang',
+                          style: TextStyle(
+                              color: Color(0xFF2196F3),
+                              fontWeight: FontWeight.bold)),
                     ),
                   ],
                 ),
@@ -246,7 +233,6 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _buildToggleButton(String role, IconData icon) {
     final isSelected = _selectedRole == role;
     final label = role == 'User' ? 'User' : 'Health Expert';
-
     return Expanded(
       child: GestureDetector(
         onTap: () => setState(() => _selectedRole = role),
@@ -260,16 +246,13 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 16, color: isSelected ? Colors.white : Colors.grey[600]),
+              Icon(icon, size: 16,
+                  color: isSelected ? Colors.white : Colors.grey[600]),
               const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: isSelected ? Colors.white : Colors.grey[600],
-                ),
-              ),
+              Text(label,
+                  style: TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.w600,
+                      color: isSelected ? Colors.white : Colors.grey[600])),
             ],
           ),
         ),

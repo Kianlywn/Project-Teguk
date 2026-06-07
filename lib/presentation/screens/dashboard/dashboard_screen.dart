@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:teguk/data/repositories/auth_repository.dart';
+import 'package:teguk/presentation/screens/activity/live_activity_screen.dart';
 import 'package:teguk/presentation/screens/auth/login_screen.dart';
+import 'package:teguk/presentation/screens/consultation/consultation_screen.dart';
 import 'package:teguk/presentation/screens/history/history_screen.dart';
-import 'package:teguk/presentation/screens/placeholder/coming_soon_screen.dart';
+import 'package:teguk/presentation/screens/reminder/reminder_setting_screen.dart';
+import 'package:teguk/presentation/screens/statistics/statistics_screen.dart';
 import 'package:teguk/presentation/widgets/quick_add_button.dart';
 import 'package:teguk/presentation/widgets/water_progress_ring.dart';
 import 'package:teguk/presentation/widgets/weather_banner.dart';
@@ -28,9 +31,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int _currentIndex = 0;
 
   static const _titles = [
-    'Dashboard Teguk',
-    'Riwayat Minum Air',
+    'Teguk',
+    'Riwayat',
     'Aktivitas',
+    'Pengingat',
+    'Statistik',
     'Konsultasi',
   ];
 
@@ -74,17 +79,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
         children: [
           _DashboardTab(userName: widget.userName),
           const HistoryScreen(embedded: true),
-          const ComingSoonScreen(title: 'Aktivitas'),
-          const ComingSoonScreen(title: 'Konsultasi'),
+          const LiveActivityScreen(embedded: true),
+          const ReminderSettingScreen(embedded: true),
+          const StatisticsScreen(embedded: true),
+          const ConsultationScreen(embedded: true),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) {
           setState(() => _currentIndex = index);
-          if (index == 1) {
-            context.read<WaterProvider>().fetchHistory();
-          }
+          if (index == 1) context.read<WaterProvider>().fetchHistory();
         },
         type: BottomNavigationBarType.fixed,
         selectedItemColor: const Color(0xFF2196F3),
@@ -93,16 +98,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.home_outlined),
             activeIcon: Icon(Icons.home),
-            label: 'Dashboard',
+            label: 'Home',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.history),
-            label: 'History',
+            label: 'Riwayat',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.directions_run_outlined),
             activeIcon: Icon(Icons.directions_run),
             label: 'Aktivitas',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.notifications_outlined),
+            activeIcon: Icon(Icons.notifications),
+            label: 'Pengingat',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.bar_chart_outlined),
+            activeIcon: Icon(Icons.bar_chart),
+            label: 'Statistik',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.chat_bubble_outline),
@@ -117,7 +132,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
 class _DashboardTab extends StatelessWidget {
   final String userName;
-
   const _DashboardTab({required this.userName});
 
   @override
@@ -131,18 +145,12 @@ class _DashboardTab extends StatelessWidget {
             children: [
               const WeatherBanner(),
               const SizedBox(height: 16),
-              Text(
-                'Halo, $userName!',
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              Text('Halo, $userName!',
+                  style: const TextStyle(
+                      fontSize: 24, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
-              Text(
-                'Target harian: ${water.target} ml',
-                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-              ),
+              Text('Target harian: ${water.target} ml',
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600])),
               const SizedBox(height: 24),
               Center(
                 child: WaterProgressRing(
@@ -153,10 +161,9 @@ class _DashboardTab extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 32),
-              const Text(
-                'Tambah asupan air',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-              ),
+              const Text('Tambah asupan air',
+                  style: TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.w600)),
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -170,6 +177,16 @@ class _DashboardTab extends StatelessWidget {
                     isLoading: water.isLoading,
                     onPressed: () => _onAdd(context, water, 250),
                   ),
+                  QuickAddButton(
+                    amountMl: 330,
+                    isLoading: water.isLoading,
+                    onPressed: () => _onAdd(context, water, 330),
+                  ),
+                  QuickAddButton(
+                    amountMl: 500,
+                    isLoading: water.isLoading,
+                    onPressed: () => _onAdd(context, water, 500),
+                  ),
                 ],
               ),
             ],
@@ -180,10 +197,7 @@ class _DashboardTab extends StatelessWidget {
   }
 
   Future<void> _onAdd(
-    BuildContext context,
-    WaterProvider water,
-    int amount,
-  ) async {
+      BuildContext context, WaterProvider water, int amount) async {
     final ok = await water.addWater(amount);
     if (!context.mounted) return;
     if (!ok) {

@@ -18,7 +18,7 @@ class CameraService {
       // Default pakai kamera belakang
       _controller = CameraController(
         _cameras.first,
-        ResolutionPreset.high,
+        ResolutionPreset.medium,
         enableAudio: false,
       );
 
@@ -48,7 +48,7 @@ class CameraService {
     await _controller?.dispose();
     _controller = CameraController(
       newCamera,
-      ResolutionPreset.high,
+      ResolutionPreset.medium,
       enableAudio: false,
     );
 

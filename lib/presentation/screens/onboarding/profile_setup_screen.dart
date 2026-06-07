@@ -85,7 +85,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                         width: 80,
                         height: 80,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF2196F3).withOpacity(0.1),
+                          color: const Color(0xFF2196F3).withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
@@ -274,7 +274,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
             color: isSelected
-                ? const Color(0xFF2196F3).withOpacity(0.08)
+                ? const Color(0xFF2196F3).withValues(alpha: 0.08)
                 : Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(

@@ -53,7 +53,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           child: ListView.separated(
             padding: const EdgeInsets.symmetric(vertical: 8),
             itemCount: water.history.length,
-            separatorBuilder: (_, __) => const Divider(height: 1, indent: 72),
+            separatorBuilder: (_, _) => const Divider(height: 1, indent: 72),
             itemBuilder: (context, index) {
               final entry =
                   Map<String, dynamic>.from(water.history[index] as Map);
