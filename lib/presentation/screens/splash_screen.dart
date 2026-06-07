@@ -4,6 +4,7 @@ import 'package:teguk/data/repositories/user_repository.dart';
 import 'package:teguk/presentation/screens/auth/login_screen.dart';
 import 'package:teguk/presentation/screens/dashboard/dashboard_screen.dart';
 import 'package:teguk/presentation/screens/expert/expert_dashboard_screen.dart';
+import 'package:teguk/presentation/screens/admin/admin_dashboard_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -42,6 +43,8 @@ class _SplashScreenState extends State<SplashScreen> {
       _go(DashboardScreen(userName: fullname, waterTarget: waterTarget));
     } else if (role == 'HealthExpert') {
       _go(ExpertDashboardScreen(expertName: fullname));
+    } else if (role == 'Admin') {
+      _go(const AdminDashboardScreen());
     } else {
       _go(const LoginScreen());
     }

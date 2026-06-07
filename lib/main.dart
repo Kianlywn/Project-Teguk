@@ -8,6 +8,7 @@ import 'package:teguk/providers/reminder_provider.dart';
 import 'package:teguk/providers/statistics_provider.dart';
 import 'package:teguk/providers/water_provider.dart';
 import 'package:teguk/providers/weather_provider.dart';
+import 'package:teguk/providers/admin_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,6 +22,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => ConsultationProvider()),
         ChangeNotifierProvider(create: (_) => ReminderProvider()),
         ChangeNotifierProvider(create: (_) => StatisticsProvider()),
+        ChangeNotifierProvider(create: (_) => AdminProvider()),
       ],
       child: const MyApp(),
     ),

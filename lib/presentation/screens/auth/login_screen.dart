@@ -4,6 +4,7 @@ import 'package:teguk/data/repositories/user_repository.dart';
 import 'package:teguk/presentation/screens/auth/register_screen.dart';
 import 'package:teguk/presentation/screens/dashboard/dashboard_screen.dart';
 import 'package:teguk/presentation/screens/expert/expert_dashboard_screen.dart';
+import 'package:teguk/presentation/screens/admin/admin_dashboard_screen.dart';
 import 'package:teguk/presentation/screens/onboarding/profile_setup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -21,7 +22,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool _isLoading = false;
   bool _obscurePassword = true;
-  String _selectedRole = 'User';
 
   @override
   void dispose() {
@@ -73,6 +73,13 @@ class _LoginScreenState extends State<LoginScreen> {
             context,
             MaterialPageRoute(
               builder: (_) => ExpertDashboardScreen(expertName: fullname),
+            ),
+          );
+        } else if (role == 'Admin') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const AdminDashboardScreen(),
             ),
           );
         } else {
@@ -132,19 +139,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 32),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  padding: const EdgeInsets.all(4),
-                  child: Row(children: [
-                    _buildToggleButton('User', Icons.person_outline),
-                    _buildToggleButton('HealthExpert', Icons.medical_services_outlined),
-                  ]),
-                ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 48),
                 const Text('Email',
                     style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
@@ -210,8 +205,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) =>
-                              RegisterScreen(initialRole: _selectedRole),
+                          builder: (_) => const RegisterScreen(),
                         ),
                       ),
                       child: const Text('Daftar Sekarang',
@@ -224,36 +218,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 24),
               ],
             ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildToggleButton(String role, IconData icon) {
-    final isSelected = _selectedRole == role;
-    final label = role == 'User' ? 'User' : 'Health Expert';
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => setState(() => _selectedRole = role),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFF2196F3) : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 16,
-                  color: isSelected ? Colors.white : Colors.grey[600]),
-              const SizedBox(width: 6),
-              Text(label,
-                  style: TextStyle(
-                      fontSize: 13, fontWeight: FontWeight.w600,
-                      color: isSelected ? Colors.white : Colors.grey[600])),
-            ],
           ),
         ),
       ),
