@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:teguk/data/repositories/water_repository.dart';
+import 'package:teguk/data/services/accelerometer_service.dart';
 
 class WaterProvider extends ChangeNotifier {
   final _repository = WaterRepository();
+  final _accelerometerService = AccelerometerService();
 
   static const _keyTotal = 'water_local_total';
   static const _keyTarget = 'water_local_target';
@@ -11,13 +13,14 @@ class WaterProvider extends ChangeNotifier {
 
   int _totalDrink = 0;
   int _target = 2000;
+  int _activityAdjustment = 0;
   double _percentage = 0.0;
   bool _isLoading = false;
   bool _isHistoryLoading = false;
   List<dynamic> _history = [];
 
   int get totalDrink => _totalDrink;
-  int get target => _target;
+  int get target => _target + _activityAdjustment;
   double get percentage => _percentage;
   double get progress => (_percentage / 100).clamp(0.0, 1.0);
   bool get isLoading => _isLoading;
@@ -30,8 +33,9 @@ class WaterProvider extends ChangeNotifier {
   }
 
   void _recalcPercentage() {
+    int currentTarget = target;
     _percentage =
-        _target > 0 ? ((_totalDrink / _target) * 100).clamp(0.0, 100.0) : 0;
+        currentTarget > 0 ? ((_totalDrink / currentTarget) * 100).clamp(0.0, 100.0) : 0;
   }
 
   Future<void> _saveLocal() async {
@@ -61,6 +65,22 @@ class WaterProvider extends ChangeNotifier {
     if (fallbackTarget != null) _target = fallbackTarget;
     await loadFromLocal();
     await fetchTodayProgress();
+
+    _accelerometerService.startListening();
+    _accelerometerService.activityStream.listen((activity) {
+      final adjustment = AccelerometerService.getWaterAdjustment(activity);
+      if (_activityAdjustment != adjustment) {
+        _activityAdjustment = adjustment;
+        _recalcPercentage();
+        notifyListeners();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _accelerometerService.dispose();
+    super.dispose();
   }
 
   Future<void> fetchTodayProgress() async {
