@@ -58,7 +58,7 @@ class _ExpertApplicationScreenState extends State<ExpertApplicationScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final success = await _repo.applyAsExpert(
+      await _repo.applyAsExpert(
         profession: _professionController.text.trim(),
         specialization: _specializationController.text.trim(),
         licenseNumber: _licenseController.text.trim(),
@@ -67,29 +67,20 @@ class _ExpertApplicationScreenState extends State<ExpertApplicationScreen> {
 
       if (!mounted) return;
 
-      if (success) {
-        setState(() => _status = 'Pending');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Aplikasi berhasil dikirim!'),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Gagal mengirim aplikasi. Coba lagi.'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
+      setState(() => _status = 'Pending');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Aplikasi berhasil dikirim!'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     } catch (e) {
       if (mounted) {
+        String msg = e.toString().replaceAll('Exception: ', '');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text(msg),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
           ),

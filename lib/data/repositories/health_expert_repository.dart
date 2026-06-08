@@ -26,7 +26,18 @@ class HealthExpertRepository {
         'experienceYears': experienceYears,
       },
     );
-    return response.statusCode == 200;
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return true;
+    } else {
+      String errorMessage = 'Gagal mengirim aplikasi';
+      try {
+        final body = jsonDecode(response.body);
+        if (body['message'] != null) {
+          errorMessage = body['message'];
+        }
+      } catch (_) {}
+      throw Exception(errorMessage);
+    }
   }
 
   Future<Map<String, dynamic>?> getMyApplication() async {
