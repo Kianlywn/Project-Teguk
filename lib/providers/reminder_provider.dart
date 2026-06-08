@@ -1,5 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:teguk/data/repositories/reminder_repository.dart';
+import 'package:teguk/data/services/notification_service.dart';
 
 class ReminderProvider extends ChangeNotifier {
   final _repository = ReminderRepository();
@@ -15,7 +18,15 @@ class ReminderProvider extends ChangeNotifier {
     notifyListeners();
     try {
       final list = await _repository.getReminders();
-      if (list != null) _reminders = list;
+      if (list != null) {
+        _reminders = list;
+        // Cache to SharedPreferences
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('cached_reminders', jsonEncode(_reminders));
+        
+        // Reschedule local notifications
+        await NotificationService().rescheduleAll(_reminders);
+      }
     } catch (e) {
       debugPrint('Error fetching reminders: $e');
     } finally {
@@ -43,7 +54,14 @@ class ReminderProvider extends ChangeNotifier {
   Future<bool> deleteReminder(String id) async {
     try {
       final success = await _repository.deleteReminder(id);
-      if (success) _reminders.removeWhere((r) => r['id'] == id);
+      if (success) {
+        _reminders.removeWhere((r) => r['id'] == id);
+        await NotificationService().cancelReminder(id);
+        
+        // Update cache
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('cached_reminders', jsonEncode(_reminders));
+      }
       notifyListeners();
       return success;
     } catch (e) {

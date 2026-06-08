@@ -266,7 +266,7 @@ class _FindExpertTabState extends State<_FindExpertTab> {
         separatorBuilder: (_, _) => const SizedBox(height: 8),
         itemBuilder: (context, i) {
           final e = _experts[i] as Map<String, dynamic>;
-          final name = e['fullName'] as String? ?? '-';
+          final name = e['fullName'] as String? ?? e['fullname'] as String? ?? '-';
           final profession = e['profession'] as String? ?? '-';
           final specialization = e['specialization'] as String? ?? '-';
           final years = e['experienceYears'] as int? ?? 0;

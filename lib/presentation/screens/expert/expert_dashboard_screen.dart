@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:teguk/data/repositories/auth_repository.dart';
+import 'package:teguk/data/repositories/health_expert_repository.dart';
 import 'package:teguk/presentation/screens/auth/login_screen.dart';
 import 'package:teguk/presentation/screens/consultation/chat_screen.dart';
+import 'package:teguk/presentation/screens/profile/profile_edit_screen.dart';
 import 'package:teguk/providers/consultation_provider.dart';
 
 class ExpertDashboardScreen extends StatefulWidget {
@@ -15,13 +17,26 @@ class ExpertDashboardScreen extends StatefulWidget {
 
 class _ExpertDashboardScreenState extends State<ExpertDashboardScreen> {
   int _currentIndex = 0;
+  late String _expertName;
+  Map<String, dynamic>? _expertInfo;
 
   @override
   void initState() {
     super.initState();
+    _expertName = widget.expertName;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ConsultationProvider>().fetchConsultations();
+      _loadExpertInfo();
     });
+  }
+
+  Future<void> _loadExpertInfo() async {
+    try {
+      final app = await HealthExpertRepository().getMyApplication();
+      if (app != null && mounted) {
+        setState(() => _expertInfo = app);
+      }
+    } catch (_) {}
   }
 
   Future<void> _logout() async {
@@ -40,6 +55,25 @@ class _ExpertDashboardScreenState extends State<ExpertDashboardScreen> {
         foregroundColor: Colors.white,
         actions: [
           IconButton(
+            icon: const Icon(Icons.person_outline),
+            tooltip: 'Edit Profil',
+            onPressed: () async {
+              final updatedName = await Navigator.push<String>(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ProfileEditScreen(
+                    currentName: _expertName,
+                    isExpert: true,
+                    expertInfo: _expertInfo,
+                  ),
+                ),
+              );
+              if (updatedName != null && mounted) {
+                setState(() => _expertName = updatedName);
+              }
+            },
+          ),
+          IconButton(
               icon: const Icon(Icons.logout),
               tooltip: 'Keluar',
               onPressed: _logout),
@@ -48,7 +82,7 @@ class _ExpertDashboardScreenState extends State<ExpertDashboardScreen> {
       body: IndexedStack(
         index: _currentIndex,
         children: [
-          _ExpertHomeTab(expertName: widget.expertName),
+          _ExpertHomeTab(expertName: _expertName),
           const _ExpertConsultationTab(),
         ],
       ),

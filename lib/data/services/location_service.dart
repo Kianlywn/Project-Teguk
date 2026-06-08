@@ -18,4 +18,14 @@ class LocationService {
       desiredAccuracy: LocationAccuracy.high,
     );
   }
+
+  // Stream posisi secara real-time
+  static Stream<Position> getPositionStream() {
+    return Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 10,
+      ),
+    );
+  }
 }

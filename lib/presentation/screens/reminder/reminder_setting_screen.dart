@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:teguk/data/services/notification_service.dart';
 import 'package:teguk/providers/reminder_provider.dart';
 
 class ReminderSettingScreen extends StatefulWidget {
@@ -15,6 +16,7 @@ class _ReminderSettingScreenState extends State<ReminderSettingScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      NotificationService().requestPermission(context);
       context.read<ReminderProvider>().fetchReminders();
     });
   }

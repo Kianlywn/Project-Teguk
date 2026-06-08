@@ -89,8 +89,11 @@ class _PendingExpertsScreenState extends State<PendingExpertsScreen> {
               itemBuilder: (context, index) {
                 final expert = provider.pendingExperts[index];
                 final id = expert['id'] ?? expert['_id'] ?? '';
-                final name = expert['fullName'] ?? 'Tanpa Nama';
+                final name = expert['fullname'] ?? expert['fullName'] ?? 'Tanpa Nama';
                 final email = expert['email'] ?? '';
+                final profession = expert['profession'] as String? ?? '-';
+                final specialization = expert['specialization'] as String? ?? '-';
+                final experienceYears = expert['experienceYears'] ?? '-';
 
                 return Card(
                   color: Colors.white,
@@ -119,6 +122,26 @@ class _PendingExpertsScreenState extends State<PendingExpertsScreen> {
                               ),
                             ),
                           ],
+                        ),
+                        const SizedBox(height: 12),
+                        // Detail profesi
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[50],
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _detailRow('Profesi', profession),
+                              const SizedBox(height: 4),
+                              _detailRow('Spesialisasi', specialization),
+                              const SizedBox(height: 4),
+                              _detailRow('Pengalaman', '$experienceYears tahun'),
+                            ],
+                          ),
                         ),
                         const SizedBox(height: 16),
                         Row(
@@ -149,6 +172,16 @@ class _PendingExpertsScreenState extends State<PendingExpertsScreen> {
           );
         },
       ),
+    );
+  }
+
+  Widget _detailRow(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+        Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+      ],
     );
   }
 }

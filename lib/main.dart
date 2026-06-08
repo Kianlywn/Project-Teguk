@@ -1,6 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:teguk/data/services/notification_service.dart';
 import 'package:teguk/presentation/screens/splash_screen.dart';
 import 'package:teguk/providers/activity_provider.dart';
 import 'package:teguk/providers/consultation_provider.dart';
@@ -13,6 +16,10 @@ import 'package:teguk/providers/admin_provider.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: '.env');
+  
+  await NotificationService().init();
+  await _rescheduleCachedReminders();
+
   runApp(
     MultiProvider(
       providers: [
@@ -43,5 +50,18 @@ class MyApp extends StatelessWidget {
       ),
       home: const SplashScreen(),
     );
+  }
+}
+
+Future<void> _rescheduleCachedReminders() async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final cachedStr = prefs.getString('cached_reminders');
+    if (cachedStr != null) {
+      final List<dynamic> reminders = jsonDecode(cachedStr);
+      await NotificationService().rescheduleAll(reminders);
+    }
+  } catch (e) {
+    debugPrint('Error rescheduling reminders: $e');
   }
 }

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:teguk/data/repositories/water_repository.dart';
 import 'package:teguk/data/services/accelerometer_service.dart';
+import 'package:teguk/data/services/location_service.dart';
+import 'dart:async';
 
 class WaterProvider extends ChangeNotifier {
   final _repository = WaterRepository();
@@ -10,17 +12,26 @@ class WaterProvider extends ChangeNotifier {
   static const _keyTotal = 'water_local_total';
   static const _keyTarget = 'water_local_target';
   static const _keyDate = 'water_local_date';
+  static const _keyAccelAdj = 'water_local_accel_adj';
+  static const _keyManualAdj = 'water_local_manual_adj';
 
   int _totalDrink = 0;
   int _target = 2000;
-  int _activityAdjustment = 0;
+  int _accelAdjustment = 0;
+  int _manualAdjustment = 0;
   double _percentage = 0.0;
   bool _isLoading = false;
   bool _isHistoryLoading = false;
   List<dynamic> _history = [];
 
+  bool _showMountainBanner = false;
+  bool get showMountainBanner => _showMountainBanner;
+  
+  bool _isDriving = false;
+  StreamSubscription? _locationSubscription;
+
   int get totalDrink => _totalDrink;
-  int get target => _target + _activityAdjustment;
+  int get target => _target + _accelAdjustment + _manualAdjustment;
   double get percentage => _percentage;
   double get progress => (_percentage / 100).clamp(0.0, 1.0);
   bool get isLoading => _isLoading;
@@ -43,14 +54,26 @@ class WaterProvider extends ChangeNotifier {
     await prefs.setString(_keyDate, _todayKey());
     await prefs.setInt(_keyTotal, _totalDrink);
     await prefs.setInt(_keyTarget, _target);
+    await prefs.setInt(_keyAccelAdj, _accelAdjustment);
+    await prefs.setInt(_keyManualAdj, _manualAdjustment);
   }
 
   Future<void> loadFromLocal() async {
     final prefs = await SharedPreferences.getInstance();
-    if (prefs.getString(_keyDate) != _todayKey()) return;
+    final savedDate = prefs.getString(_keyDate);
+    
+    if (savedDate != _todayKey()) {
+      _accelAdjustment = 0;
+      _manualAdjustment = 0;
+      await prefs.setInt(_keyAccelAdj, 0);
+      await prefs.setInt(_keyManualAdj, 0);
+      return;
+    }
 
     _totalDrink = prefs.getInt(_keyTotal) ?? 0;
     _target = prefs.getInt(_keyTarget) ?? _target;
+    _accelAdjustment = prefs.getInt(_keyAccelAdj) ?? 0;
+    _manualAdjustment = prefs.getInt(_keyManualAdj) ?? 0;
     _recalcPercentage();
     notifyListeners();
   }
@@ -68,17 +91,50 @@ class WaterProvider extends ChangeNotifier {
 
     _accelerometerService.startListening();
     _accelerometerService.activityStream.listen((activity) {
+      if (_isDriving) return;
+      
       final adjustment = AccelerometerService.getWaterAdjustment(activity);
-      if (_activityAdjustment != adjustment) {
-        _activityAdjustment = adjustment;
+      if (adjustment > _accelAdjustment) {
+        _accelAdjustment = adjustment;
         _recalcPercentage();
+        _saveLocal();
+        notifyListeners();
+      }
+    });
+
+    _locationSubscription = LocationService.getPositionStream().listen((position) {
+      _isDriving = position.speed > 10.0;
+      
+      if (position.altitude > 1500 && !_showMountainBanner && _manualAdjustment < 1000) {
+        _showMountainBanner = true;
         notifyListeners();
       }
     });
   }
 
+  void ignoreMountainBanner() {
+    _showMountainBanner = false;
+    notifyListeners();
+  }
+
+  Future<void> addMountainAdjustment() async {
+    _showMountainBanner = false;
+    _manualAdjustment += 1000;
+    _recalcPercentage();
+    await _saveLocal();
+    notifyListeners();
+  }
+
+  Future<void> addManualActivityAdjustment(int ml) async {
+    _manualAdjustment += ml;
+    _recalcPercentage();
+    await _saveLocal();
+    notifyListeners();
+  }
+
   @override
   void dispose() {
+    _locationSubscription?.cancel();
     _accelerometerService.dispose();
     super.dispose();
   }

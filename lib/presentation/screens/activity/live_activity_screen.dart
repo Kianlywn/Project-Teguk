@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:teguk/providers/activity_provider.dart';
+import 'package:teguk/providers/water_provider.dart';
 
 class LiveActivityScreen extends StatefulWidget {
   final bool embedded;
@@ -62,13 +63,21 @@ class _LiveActivityScreenState extends State<LiveActivityScreen> {
           children: [
             RefreshIndicator(
               onRefresh: provider.fetchActivities,
-              child: ListView.separated(
+              child: ListView.builder(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
-                itemCount: provider.activities.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 8),
+                itemCount: provider.activities.length + 1,
                 itemBuilder: (context, i) {
-                  final a = provider.activities[i] as Map<String, dynamic>;
-                  return _ActivityCard(activity: a);
+                  if (i == 0) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: _buildStepCounterCard(provider.currentSteps),
+                    );
+                  }
+                  final a = provider.activities[i - 1] as Map<String, dynamic>;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: _ActivityCard(activity: a),
+                  );
                 },
               ),
             ),
@@ -118,6 +127,98 @@ class _LiveActivityScreenState extends State<LiveActivityScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildStepCounterCard(int steps) {
+    const int goal = 6000;
+    final double progress = (steps / goal).clamp(0.0, 1.0);
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF2196F3), Color(0xFF1976D2)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF2196F3).withValues(alpha: 0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.directions_walk, color: Colors.white, size: 28),
+              ),
+              const SizedBox(width: 16),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Langkah Hari Ini',
+                        style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600)),
+                    Text('Terus bergerak!',
+                        style: TextStyle(color: Colors.white54, fontSize: 12)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                steps.toString(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 36,
+                  fontWeight: FontWeight.bold,
+                  height: 1,
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.only(bottom: 4, left: 4),
+                child: Text(
+                  '/ 6000',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 8,
+              backgroundColor: Colors.white.withValues(alpha: 0.2),
+              valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -266,6 +367,18 @@ class _AddActivitySheetState extends State<_AddActivitySheet> {
     if (!mounted) return;
     setState(() => _isLoading = false);
     if (success) {
+      if (mounted) {
+        int addWater = 200; // default low
+        if (type.toLowerCase() == 'swimming') {
+          addWater = 400;
+        } else if (['running', 'cycling', 'gym', 'basketball', 'football'].contains(type.toLowerCase())) {
+          addWater = 500;
+        }
+        if (_selectedLevel == 'High') addWater += 200;
+        
+        context.read<WaterProvider>().addManualActivityAdjustment(addWater);
+      }
+
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

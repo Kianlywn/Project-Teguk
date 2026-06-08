@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:teguk/data/repositories/auth_repository.dart';
+import 'package:teguk/data/repositories/health_expert_repository.dart';
 import 'package:teguk/data/repositories/user_repository.dart';
 import 'package:teguk/presentation/screens/auth/login_screen.dart';
 import 'package:teguk/presentation/screens/dashboard/dashboard_screen.dart';
+import 'package:teguk/presentation/screens/expert/expert_application_screen.dart';
 import 'package:teguk/presentation/screens/expert/expert_dashboard_screen.dart';
 import 'package:teguk/presentation/screens/admin/admin_dashboard_screen.dart';
 
@@ -42,11 +44,39 @@ class _SplashScreenState extends State<SplashScreen> {
           : 2000;
       _go(DashboardScreen(userName: fullname, waterTarget: waterTarget));
     } else if (role == 'HealthExpert') {
-      _go(ExpertDashboardScreen(expertName: fullname));
+      await _handleExpertRouting(fullname);
     } else if (role == 'Admin') {
       _go(const AdminDashboardScreen());
     } else {
       _go(const LoginScreen());
+    }
+  }
+
+  Future<void> _handleExpertRouting(String fullname) async {
+    try {
+      final application = await HealthExpertRepository().getMyApplication();
+      if (!mounted) return;
+
+      if (application == null) {
+        // Belum pernah apply
+        _go(ExpertApplicationScreen(expertName: fullname));
+      } else {
+        final status = application['status'] as String? ?? '';
+        if (status == 'Approved') {
+          _go(ExpertDashboardScreen(expertName: fullname));
+        } else {
+          // Pending atau Rejected — tampilkan application screen dengan data
+          _go(ExpertApplicationScreen(
+            expertName: fullname,
+            existingApplication: application,
+          ));
+        }
+      }
+    } catch (e) {
+      // Jika gagal fetch, tetap arahkan ke application screen
+      if (mounted) {
+        _go(ExpertApplicationScreen(expertName: fullname));
+      }
     }
   }
 
