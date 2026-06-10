@@ -184,57 +184,55 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildInputBar() {
-    return Container(
-      padding: EdgeInsets.only(
-        left: 16, right: 8,
-        top: 8,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 8,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 8, offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            icon: const Icon(Icons.camera_alt, color: Colors.grey),
-            onPressed: _openCamera,
-          ),
-          Expanded(
-            child: TextField(
-              controller: _messageController,
-              decoration: InputDecoration(
-                hintText: 'Ketik pesan...',
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
-                    borderSide: BorderSide.none),
-                filled: true,
-                fillColor: Colors.grey[100],
-                contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 10),
+    return SafeArea(
+      child: Container(
+        padding: const EdgeInsets.only(left: 16, right: 8, top: 8, bottom: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 8, offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.camera_alt, color: Colors.grey),
+              onPressed: _openCamera,
+            ),
+            Expanded(
+              child: TextField(
+                controller: _messageController,
+                decoration: InputDecoration(
+                  hintText: 'Ketik pesan...',
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide.none),
+                  filled: true,
+                  fillColor: Colors.grey[100],
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 10),
+                ),
+                textCapitalization: TextCapitalization.sentences,
+                maxLines: null,
+                onSubmitted: (_) => _sendMessage(),
               ),
-              textCapitalization: TextCapitalization.sentences,
-              maxLines: null,
-              onSubmitted: (_) => _sendMessage(),
             ),
-          ),
-          const SizedBox(width: 8),
-          Consumer<ConsultationProvider>(
-            builder: (_, provider, _) => IconButton(
-              onPressed: provider.isLoading ? null : _sendMessage,
-              icon: provider.isLoading
-                  ? const SizedBox(
-                      height: 20, width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Icon(Icons.send, color: Color(0xFF2196F3)),
+            const SizedBox(width: 8),
+            Consumer<ConsultationProvider>(
+              builder: (_, provider, _) => IconButton(
+                onPressed: provider.isLoading ? null : _sendMessage,
+                icon: provider.isLoading
+                    ? const SizedBox(
+                        height: 20, width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.send, color: Color(0xFF2196F3)),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

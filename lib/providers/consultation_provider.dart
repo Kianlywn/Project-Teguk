@@ -5,14 +5,16 @@ class ConsultationProvider extends ChangeNotifier {
   final _repository = ConsultationRepository();
 
   List<dynamic> _consultations = [];
+  List<dynamic> _incomingConsultations = [];
   List<dynamic> _messages = [];
   bool _isLoading = false;
 
   List<dynamic> get consultations => _consultations;
+  List<dynamic> get incomingConsultations => _incomingConsultations;
   List<dynamic> get messages => _messages;
   bool get isLoading => _isLoading;
 
-  // Fetch all consultations
+  // Fetch all consultations (where user is the client)
   Future<void> fetchConsultations() async {
     _isLoading = true;
     notifyListeners();
@@ -24,6 +26,24 @@ class ConsultationProvider extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint('Error fetching consultations: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // Fetch incoming consultations (where user is the expert)
+  Future<void> fetchIncomingConsultations() async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final list = await _repository.getIncomingConsultations();
+      if (list != null) {
+        _incomingConsultations = list;
+      }
+    } catch (e) {
+      debugPrint('Error fetching incoming consultations: $e');
     } finally {
       _isLoading = false;
       notifyListeners();

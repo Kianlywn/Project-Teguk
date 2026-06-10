@@ -29,11 +29,13 @@ class HealthExpertRepository {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return true;
     } else {
-      String errorMessage = 'Gagal mengirim aplikasi';
+      String errorMessage = 'Gagal (${response.statusCode}): ${response.body}';
       try {
         final body = jsonDecode(response.body);
         if (body['message'] != null) {
           errorMessage = body['message'];
+        } else if (body['error'] != null) {
+          errorMessage = body['error'];
         }
       } catch (_) {}
       throw Exception(errorMessage);

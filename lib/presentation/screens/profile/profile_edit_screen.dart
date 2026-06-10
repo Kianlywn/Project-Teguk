@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:teguk/data/repositories/auth_repository.dart';
 import 'package:teguk/data/repositories/user_repository.dart';
+import 'package:teguk/data/repositories/health_expert_repository.dart';
 import 'package:teguk/providers/water_provider.dart';
+import 'package:teguk/presentation/screens/expert/expert_application_screen.dart';
+import 'package:teguk/data/services/notification_service.dart';
 
 class ProfileEditScreen extends StatefulWidget {
   final String currentName;
@@ -32,31 +36,56 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   String _selectedEnvironment = '';
   bool _isLoading = false;
   bool _isFetching = true;
+  bool _isExpertActual = false;
+  Map<String, dynamic>? _myApplication;
 
   final _genders = ['Laki-laki', 'Perempuan'];
   final _activityLevels = ['Low', 'Medium', 'High'];
   final _environments = ['Normal', 'Hot', 'Cold'];
 
+  bool _isHourlyReminderEnabled = false;
+
   @override
   void initState() {
     super.initState();
-    _nameController.text = widget.currentName;
+    final currentName = widget.currentName;
+    _nameController.text = currentName.trim().isEmpty 
+        ? 'Pengguna' 
+        : currentName;
     _loadProfile();
   }
 
   Future<void> _loadProfile() async {
     try {
+      final role = await AuthRepository().getRole();
+      final isExpert = role == 'HealthExpert';
       final profile = await _repo.getProfile();
-      if (profile != null && mounted) {
+      Map<String, dynamic>? myApp;
+      
+      if (!isExpert) {
+        myApp = await HealthExpertRepository().getMyApplication();
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+      final reminderEnabled = prefs.getBool('is_hourly_reminder_active') ?? false;
+
+      if (mounted) {
         setState(() {
-          _nameController.text =
-              profile['fullname'] as String? ?? widget.currentName;
-          _ageController.text = (profile['age'] ?? '').toString();
-          _weightController.text = (profile['weight'] ?? '').toString();
-          _selectedGender = profile['gender'] as String? ?? '';
-          _selectedActivity = profile['activityLevel'] as String? ?? '';
-          _selectedEnvironment =
-              profile['environmentCondition'] as String? ?? '';
+          _isHourlyReminderEnabled = reminderEnabled;
+          _isExpertActual = isExpert;
+          if (profile != null) {
+            _nameController.text =
+                profile['fullname'] as String? ?? widget.currentName;
+            _ageController.text = (profile['age'] ?? '').toString();
+            _weightController.text = (profile['weight'] ?? '').toString();
+            _selectedGender = profile['gender'] as String? ?? '';
+            _selectedActivity = profile['activityLevel'] as String? ?? '';
+            _selectedEnvironment =
+                profile['environmentCondition'] as String? ?? '';
+          }
+          if (myApp != null) {
+            _myApplication = myApp;
+          }
           _isFetching = false;
         });
       }
@@ -229,10 +258,12 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                         decoration:
                             _inputDecoration('Contoh: 25', themeColor),
                         validator: (v) {
-                          if (v == null || v.trim().isEmpty)
+                          if (v == null || v.trim().isEmpty) {
                             return 'Usia wajib diisi';
-                          if (int.tryParse(v.trim()) == null)
+                          }
+                          if (int.tryParse(v.trim()) == null) {
                             return 'Masukkan angka valid';
+                          }
                           return null;
                         },
                       ),
@@ -247,10 +278,12 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                         decoration:
                             _inputDecoration('Contoh: 60', themeColor),
                         validator: (v) {
-                          if (v == null || v.trim().isEmpty)
+                          if (v == null || v.trim().isEmpty) {
                             return 'Berat badan wajib diisi';
-                          if (double.tryParse(v.trim()) == null)
+                          }
+                          if (double.tryParse(v.trim()) == null) {
                             return 'Masukkan angka valid';
+                          }
                           return null;
                         },
                       ),
@@ -288,6 +321,33 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                         themeColor,
                       ),
                       const SizedBox(height: 24),
+                      
+                      // Notification Toggle
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.grey[50],
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey[200]!),
+                        ),
+                        child: SwitchListTile(
+                          title: const Text('Pengingat Minum Tiap Jam', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                          subtitle: const Text('Notifikasi otomatis setiap jam', style: TextStyle(fontSize: 12)),
+                          value: _isHourlyReminderEnabled,
+                          activeTrackColor: themeColor,
+                          onChanged: (val) async {
+                            setState(() => _isHourlyReminderEnabled = val);
+                            final prefs = await SharedPreferences.getInstance();
+                            await prefs.setBool('is_hourly_reminder_active', val);
+                            if (val) {
+                              await NotificationService().requestPermission();
+                              await NotificationService().enableHourlyReminder();
+                            } else {
+                              await NotificationService().disableReminder();
+                            }
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 24),
                     ],
 
                     // Save button
@@ -315,6 +375,52 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                                     fontWeight: FontWeight.w600)),
                       ),
                     ),
+                    const SizedBox(height: 16),
+                    if (!_isExpertActual)
+                      Center(
+                        child: _myApplication != null
+                            ? Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: _myApplication!['status'] == 'Rejected'
+                                      ? Colors.red.withValues(alpha: 0.1)
+                                      : Colors.orange.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  'Status Pengajuan Expert: ${_myApplication!['status']}',
+                                  style: TextStyle(
+                                    color: _myApplication!['status'] == 'Rejected'
+                                        ? Colors.red
+                                        : Colors.orange,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              )
+                            : TextButton.icon(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          ExpertApplicationScreen(
+                                        expertName: widget.currentName,
+                                      ),
+                                    ),
+                                  ).then((_) => _loadProfile()); // Refresh after return
+                                },
+                                icon: const Icon(Icons.medical_services_outlined,
+                                    color: Color(0xFF00897B)),
+                                label: const Text(
+                                  'Ingin menjadi Health Expert? Daftar di sini',
+                                  style: TextStyle(
+                                    color: Color(0xFF00897B),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                      ),
                     const SizedBox(height: 24),
                   ],
                 ),

@@ -55,15 +55,23 @@ class AuthRepository {
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200 && data['token'] != null) {
+        final fullname = (data['fullname'] != null && data['fullname'].toString().trim().isNotEmpty) 
+            ? data['fullname'] 
+            : 'Pengguna';
+            
         await _saveSession(
           data['token'],
           data['role'],
           data['email'],
-          data['fullname'],
+          fullname,
         );
-        return {'success': true, 'role': data['role'], 'fullname': data['fullname']};
+        return {'success': true, 'role': data['role'], 'fullname': fullname};
       }
-      return {'success': false, 'message': data.toString()};
+      if (response.statusCode == 401 || response.statusCode == 404 || response.statusCode == 400) {
+        return {'success': false, 'message': 'Email atau password salah.'};
+      }
+      
+      return {'success': false, 'message': data['message'] ?? 'Login gagal.'};
     } on TimeoutException {
       return {'success': false, 'message': 'Server timeout, coba lagi.'};
     } on SocketException {
@@ -100,12 +108,13 @@ class AuthRepository {
         }),
       ).timeout(const Duration(seconds: 30));
 
-      final data = jsonDecode(response.body);
+      // API returns plain string, not JSON — avoid jsonDecode
+      final data = response.body.replaceAll('"', '').trim();
 
       if (response.statusCode == 200 && data == 'Register Success') {
         return {'success': true};
       }
-      return {'success': false, 'message': data.toString()};
+      return {'success': false, 'message': data};
     } on TimeoutException {
       return {'success': false, 'message': 'Server timeout, coba lagi.'};
     } on SocketException {
@@ -137,12 +146,13 @@ class AuthRepository {
         }),
       ).timeout(const Duration(seconds: 30));
 
-      final data = jsonDecode(response.body);
+      // API returns plain string, not JSON — avoid jsonDecode
+      final data = response.body.replaceAll('"', '').trim();
 
       if (response.statusCode == 200 && data == 'Register Success') {
         return {'success': true};
       }
-      return {'success': false, 'message': data.toString()};
+      return {'success': false, 'message': data};
     } on TimeoutException {
       return {'success': false, 'message': 'Server timeout, coba lagi.'};
     } on SocketException {

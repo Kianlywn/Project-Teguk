@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:teguk/data/repositories/auth_repository.dart';
 import 'package:teguk/data/repositories/health_expert_repository.dart';
 import 'package:teguk/presentation/screens/consultation/chat_screen.dart';
 import 'package:teguk/providers/consultation_provider.dart';
@@ -15,24 +16,47 @@ class ConsultationScreen extends StatefulWidget {
 class _ConsultationScreenState extends State<ConsultationScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  String? _userRole;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _initRole();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ConsultationProvider>().fetchConsultations();
     });
   }
 
+  Future<void> _initRole() async {
+    final role = await AuthRepository().getRole();
+    if (mounted) {
+      setState(() {
+        _userRole = role;
+        _tabController = TabController(
+            length: _userRole == 'HealthExpert' ? 3 : 2, vsync: this);
+      });
+      if (role == 'HealthExpert') {
+        context.read<ConsultationProvider>().fetchIncomingConsultations();
+      }
+    }
+  }
+
   @override
   void dispose() {
-    _tabController.dispose();
+    if (_userRole != null) _tabController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_userRole == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final isExpert = _userRole == 'HealthExpert';
+
     final body = Column(
       children: [
         Container(
@@ -42,18 +66,20 @@ class _ConsultationScreenState extends State<ConsultationScreen>
             indicatorColor: Colors.white,
             labelColor: Colors.white,
             unselectedLabelColor: Colors.white70,
-            tabs: const [
-              Tab(text: 'Konsultasi Saya'),
-              Tab(text: 'Cari Expert'),
+            tabs: [
+              const Tab(text: 'Konsultasi Saya'),
+              if (isExpert) const Tab(text: 'Pasien Masuk'),
+              const Tab(text: 'Cari Expert'),
             ],
           ),
         ),
         Expanded(
           child: TabBarView(
             controller: _tabController,
-            children: const [
-              _MyConsultationsTab(),
-              _FindExpertTab(),
+            children: [
+              const _MyConsultationsTab(),
+              if (isExpert) const _ExpertConsultationTab(),
+              const _FindExpertTab(),
             ],
           ),
         ),
@@ -126,7 +152,6 @@ class _MyConsultationsTab extends StatelessWidget {
               final c = provider.consultations[i] as Map<String, dynamic>;
               final consultationId = c['consultationId'] as String;
               final expertName = c['expertName'] as String? ?? 'Expert';
-              final status = c['status'] as String? ?? '-';
               final createdAt = c['createdAt'] as String?;
 
               return ListTile(
@@ -154,24 +179,103 @@ class _MyConsultationsTab extends StatelessWidget {
                     style: const TextStyle(fontWeight: FontWeight.w600)),
                 subtitle: Text(_formatDate(createdAt),
                     style: TextStyle(fontSize: 12, color: Colors.grey[500])),
-                trailing: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(status,
-                      style: const TextStyle(
-                          fontSize: 11,
-                          color: Colors.green,
-                          fontWeight: FontWeight.w600)),
-                ),
               );
             },
           ),
         );
       },
+    );
+  }
+}
+
+// --- Tab: Pasien Masuk (Hanya untuk Health Expert) ---
+class _ExpertConsultationTab extends StatelessWidget {
+  const _ExpertConsultationTab();
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<ConsultationProvider>(
+      builder: (context, provider, _) {
+        if (provider.isLoading && provider.incomingConsultations.isEmpty) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (provider.incomingConsultations.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.inbox_outlined, size: 64, color: Colors.grey[400]),
+                  const SizedBox(height: 16),
+                  Text('Belum ada konsultasi masuk',
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[700])),
+                ],
+              ),
+            ),
+          );
+        }
+        return RefreshIndicator(
+          onRefresh: provider.fetchIncomingConsultations,
+          child: ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemCount: provider.incomingConsultations.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 8),
+            itemBuilder: (context, i) {
+              final c = provider.incomingConsultations[i] as Map<String, dynamic>;
+              return _ExpertConsultationTile(consultation: c);
+            },
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ExpertConsultationTile extends StatelessWidget {
+  final Map<String, dynamic> consultation;
+  const _ExpertConsultationTile({required this.consultation});
+
+  String _formatDate(String? iso) {
+    if (iso == null) return '';
+    final dt = DateTime.parse(iso).toLocal();
+    const months = ['Jan','Feb','Mar','Apr','Mei','Jun',
+        'Jul','Agu','Sep','Okt','Nov','Des'];
+    return '${dt.day} ${months[dt.month - 1]} ${dt.year}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final consultationId = consultation['consultationId'] as String;
+    final userName = consultation['userName'] as String? ?? 'User';
+    final createdAt = consultation['createdAt'] as String?;
+
+    return ListTile(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ChatScreen(
+            consultationId: consultationId,
+            peerName: userName,
+          ),
+        ),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      tileColor: Colors.white,
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: Colors.grey[200]!)),
+      leading: CircleAvatar(
+        backgroundColor: const Color(0xFF00897B).withValues(alpha: 0.1),
+        child: const Icon(Icons.person_outline, color: Color(0xFF00897B)),
+      ),
+      title: Text(userName,
+          style: const TextStyle(fontWeight: FontWeight.w600)),
+      subtitle: Text(_formatDate(createdAt),
+          style: TextStyle(fontSize: 12, color: Colors.grey[500])),
     );
   }
 }
@@ -197,10 +301,18 @@ class _FindExpertTabState extends State<_FindExpertTab> {
 
   Future<void> _loadExperts() async {
     setState(() => _isLoading = true);
+    final myName = await AuthRepository().getFullname();
     final list = await _repo.getExpertList();
     if (mounted) {
       setState(() {
-        _experts = list ?? [];
+        if (list != null) {
+          _experts = list.where((e) {
+            final name = e['fullName'] as String? ?? e['fullname'] as String? ?? '';
+            return name != myName;
+          }).toList();
+        } else {
+          _experts = [];
+        }
         _isLoading = false;
       });
     }

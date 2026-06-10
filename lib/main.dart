@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
@@ -7,7 +6,6 @@ import 'package:teguk/data/services/notification_service.dart';
 import 'package:teguk/presentation/screens/splash_screen.dart';
 import 'package:teguk/providers/activity_provider.dart';
 import 'package:teguk/providers/consultation_provider.dart';
-import 'package:teguk/providers/reminder_provider.dart';
 import 'package:teguk/providers/statistics_provider.dart';
 import 'package:teguk/providers/water_provider.dart';
 import 'package:teguk/providers/weather_provider.dart';
@@ -18,7 +16,7 @@ Future<void> main() async {
   await dotenv.load(fileName: '.env');
   
   await NotificationService().init();
-  await _rescheduleCachedReminders();
+  await _checkHourlyReminder();
 
   runApp(
     MultiProvider(
@@ -27,7 +25,6 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => WeatherProvider()),
         ChangeNotifierProvider(create: (_) => ActivityProvider()),
         ChangeNotifierProvider(create: (_) => ConsultationProvider()),
-        ChangeNotifierProvider(create: (_) => ReminderProvider()),
         ChangeNotifierProvider(create: (_) => StatisticsProvider()),
         ChangeNotifierProvider(create: (_) => AdminProvider()),
       ],
@@ -53,15 +50,14 @@ class MyApp extends StatelessWidget {
   }
 }
 
-Future<void> _rescheduleCachedReminders() async {
+Future<void> _checkHourlyReminder() async {
   try {
     final prefs = await SharedPreferences.getInstance();
-    final cachedStr = prefs.getString('cached_reminders');
-    if (cachedStr != null) {
-      final List<dynamic> reminders = jsonDecode(cachedStr);
-      await NotificationService().rescheduleAll(reminders);
+    final isActive = prefs.getBool('is_hourly_reminder_active') ?? false;
+    if (isActive) {
+      await NotificationService().enableHourlyReminder();
     }
   } catch (e) {
-    debugPrint('Error rescheduling reminders: $e');
+    debugPrint('Error checking hourly reminder: $e');
   }
 }

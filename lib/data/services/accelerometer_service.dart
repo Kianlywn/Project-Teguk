@@ -23,16 +23,21 @@ class AccelerometerService {
   static const double _activeThreshold = 20.0;
 
   void startListening() {
-    _sensorSubscription = accelerometerEventStream().listen((event) {
-      double magnitude = _calculateMagnitude(event.x, event.y, event.z);
-      ActivityLevel newActivity = _classifyActivity(magnitude);
+    _sensorSubscription = accelerometerEventStream().listen(
+      (event) {
+        double magnitude = _calculateMagnitude(event.x, event.y, event.z);
+        ActivityLevel newActivity = _classifyActivity(magnitude);
 
-      // Hanya emit kalau activity berubah
-      if (newActivity != _currentActivity) {
-        _currentActivity = newActivity;
-        _activityController.add(_currentActivity);
-      }
-    });
+        // Hanya emit kalau activity berubah
+        if (newActivity != _currentActivity) {
+          _currentActivity = newActivity;
+          _activityController.add(_currentActivity);
+        }
+      },
+      onError: (error) {
+        // Abaikan error sensor jika tidak didukung
+      },
+    );
   }
 
   void stopListening() {

@@ -28,6 +28,25 @@ class ConsultationRepository {
     return null;
   }
 
+  // Get Incoming Consultations (for Health Expert)
+  Future<List<dynamic>?> getIncomingConsultations() async {
+    final token = await _getToken();
+    if (token == null) return null;
+
+    final response = await http.get(
+      Uri.parse(ApiConstants.consultationIncoming),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as List<dynamic>;
+    }
+    return null;
+  }
+
   // Get Messages for a Consultation
   Future<List<dynamic>?> getMessages(String consultationId) async {
     final token = await _getToken();

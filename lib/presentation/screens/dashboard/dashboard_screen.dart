@@ -6,7 +6,6 @@ import 'package:teguk/presentation/screens/auth/login_screen.dart';
 import 'package:teguk/presentation/screens/consultation/consultation_screen.dart';
 import 'package:teguk/presentation/screens/history/history_screen.dart';
 import 'package:teguk/presentation/screens/profile/profile_edit_screen.dart';
-import 'package:teguk/presentation/screens/reminder/reminder_setting_screen.dart';
 import 'package:teguk/presentation/screens/statistics/statistics_screen.dart';
 import 'package:teguk/presentation/widgets/quick_add_button.dart';
 import 'package:teguk/presentation/widgets/water_progress_ring.dart';
@@ -37,7 +36,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     'Teguk',
     'Riwayat',
     'Aktivitas',
-    'Pengingat',
     'Statistik',
     'Konsultasi',
   ];
@@ -99,7 +97,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           _DashboardTab(userName: _userName),
           const HistoryScreen(embedded: true),
           const LiveActivityScreen(embedded: true),
-          const ReminderSettingScreen(embedded: true),
           const StatisticsScreen(embedded: true),
           const ConsultationScreen(embedded: true),
         ],
@@ -127,11 +124,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             icon: Icon(Icons.directions_run_outlined),
             activeIcon: Icon(Icons.directions_run),
             label: 'Aktivitas',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.notifications_outlined),
-            activeIcon: Icon(Icons.notifications),
-            label: 'Pengingat',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.bar_chart_outlined),

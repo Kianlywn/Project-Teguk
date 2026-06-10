@@ -1,8 +1,6 @@
-import 'dart:convert';
-import 'package:flutter/material.dart';
+import 'dart:math';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter_timezone/flutter_timezone.dart';
@@ -17,17 +15,37 @@ class NotificationService {
 
   bool _initialized = false;
 
+  final List<String> _hydrationTips = [
+    "Jangan lupa penuhi target hidrasimu hari ini!",
+    "Air putih membantu menjaga konsentrasi. Sudah minum?",
+    "Merasa lelah? Segelas air mungkin yang kamu butuhkan.",
+    "Kulit cerah dimulai dari hidrasi yang cukup dari dalam.",
+    "Tambah asupan airmu jika beraktivitas berat atau berkeringat.",
+    "Minum sedikit-sedikit tapi sering lebih baik daripada langsung banyak.",
+    "Bawa selalu botol minummu ke mana pun pergi.",
+    "Dehidrasi ringan dapat memicu sakit kepala lho, yuk minum!",
+    "Penuhi hidrasi untuk menjaga metabolisme tubuh tetap maksimal."
+  ];
+
   Future<void> init() async {
     if (_initialized) return;
 
     tz.initializeTimeZones();
-    final dynamic localTimezone = await FlutterTimezone.getLocalTimezone();
-    tz.setLocalLocation(tz.getLocation(localTimezone.toString()));
+    try {
+      final localTimezone = await FlutterTimezone.getLocalTimezone();
+      String timezoneName = localTimezone.toString();
+      final match = RegExp(r'[A-Za-z]+/[A-Za-z_]+').firstMatch(timezoneName);
+      if (match != null) {
+        timezoneName = match.group(0)!;
+      }
+      tz.setLocalLocation(tz.getLocation(timezoneName));
+    } catch (e) {
+      tz.setLocalLocation(tz.getLocation('Asia/Jakarta'));
+    }
 
     const AndroidInitializationSettings initSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
     
-    // For iOS, you might want to add DarwinInitializationSettings if targeting iOS later
     const InitializationSettings initSettings = InitializationSettings(
       android: initSettingsAndroid,
     );
@@ -36,80 +54,19 @@ class NotificationService {
     _initialized = true;
   }
 
-  Future<void> requestPermission(BuildContext context) async {
-    final status = await Permission.notification.request();
-
-    // Android 12+ requires EXACT_ALARM permission separately for precise scheduling
-    if (await Permission.scheduleExactAlarm.isDenied) {
-      if (context.mounted) {
-        final confirm = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Izin Alarm Dibutuhkan'),
-            content: const Text(
-                'Untuk mengingatkan kamu minum air tepat waktu, aplikasi membutuhkan izin Alarm & Reminders. Arahkan ke Settings untuk mengaktifkannya?'),
-            actions: [
-              TextButton(
-                  onPressed: () => Navigator.pop(ctx, false),
-                  child: const Text('Nanti')),
-              ElevatedButton(
-                  onPressed: () => Navigator.pop(ctx, true),
-                  child: const Text('Buka Settings')),
-            ],
-          ),
-        );
-        if (confirm == true) {
-          await openAppSettings();
-        }
-      }
-    }
+  Future<void> requestPermission() async {
+    await Permission.notification.request();
   }
 
-  // Atomic counter for unique integer ID
-  Future<int> _getAndIncrementCounter() async {
-    final prefs = await SharedPreferences.getInstance();
-    final current = prefs.getInt('notification_counter') ?? 1;
-    await prefs.setInt('notification_counter', current + 1);
-    return current;
-  }
-
-  // Get or Create integer ID from UUID
-  Future<int> _getNotificationId(String uuid) async {
-    final prefs = await SharedPreferences.getInstance();
-    final mapStr = prefs.getString('notification_uuid_map') ?? '{}';
-    final Map<String, dynamic> map = jsonDecode(mapStr);
-
-    if (map.containsKey(uuid)) {
-      return map[uuid] as int;
-    }
-
-    final newId = await _getAndIncrementCounter();
-    map[uuid] = newId;
-    await prefs.setString('notification_uuid_map', jsonEncode(map));
-    return newId;
-  }
-
-  Future<void> scheduleReminder(String uuid, String timeStr, int intervalMinutes) async {
-    final int baseId = await _getNotificationId(uuid);
-    
-    // Parse timeStr "HH:mm:ss"
-    final parts = timeStr.split(':');
-    final int targetHour = int.parse(parts[0]);
-    final int targetMinute = int.parse(parts[1]);
-
-    final now = tz.TZDateTime.now(tz.local);
-    tz.TZDateTime firstScheduledDate = tz.TZDateTime(
-        tz.local, now.year, now.month, now.day, targetHour, targetMinute);
-
-    if (firstScheduledDate.isBefore(now)) {
-      firstScheduledDate = firstScheduledDate.add(const Duration(days: 1));
-    }
+  Future<void> enableHourlyReminder() async {
+    // Bersihkan jadwal lama sebelum menjadwalkan ulang
+    await disableReminder();
 
     const AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
-      'water_reminder_channel',
+      'hourly_water_reminder',
       'Water Reminders',
-      channelDescription: 'Channel untuk pengingat minum air',
+      channelDescription: 'Pengingat rutin untuk minum air',
       importance: Importance.max,
       priority: Priority.high,
       icon: '@mipmap/ic_launcher',
@@ -117,55 +74,26 @@ class NotificationService {
     const NotificationDetails platformChannelSpecifics =
         NotificationDetails(android: androidPlatformChannelSpecifics);
 
-    // Pre-schedule for the next 24 hours
-    // How many times does the interval fit in 24 hours?
-    final int occurrences = (24 * 60) ~/ intervalMinutes;
-    
-    // Schedule multiple notifications forward
-    for (int i = 0; i < occurrences; i++) {
-      // Offset ID so they don't overwrite each other, but can still be cancelled
-      // baseId * 1000 + i (Assuming max 1000 occurrences per reminder which is true since interval >= 15)
-      final int scheduleId = (baseId * 1000) + i;
-      final scheduleTime = firstScheduledDate.add(Duration(minutes: intervalMinutes * i));
+    final now = tz.TZDateTime.now(tz.local);
+    final random = Random();
+
+    // Jadwalkan 24 notifikasi untuk 24 jam ke depan (aman dari limit 500 Android 14)
+    for (int i = 1; i <= 24; i++) {
+      final scheduleTime = now.add(Duration(hours: i));
+      final tip = _hydrationTips[random.nextInt(_hydrationTips.length)];
 
       await _notificationsPlugin.zonedSchedule(
-        id: scheduleId,
+        id: i,
         title: 'Waktunya Minum Air! 💧',
-        body: 'Jangan lupa penuhi target hidrasimu hari ini.',
+        body: tip,
         scheduledDate: scheduleTime,
         notificationDetails: platformChannelSpecifics,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       );
     }
   }
 
-  Future<void> cancelReminder(String uuid) async {
-    final prefs = await SharedPreferences.getInstance();
-    final mapStr = prefs.getString('notification_uuid_map') ?? '{}';
-    final Map<String, dynamic> map = jsonDecode(mapStr);
-
-    if (map.containsKey(uuid)) {
-      final int baseId = map[uuid] as int;
-      // Cancel all pre-scheduled items for this baseId
-      // We assume max 1000 occurrences as before
-      for (int i = 0; i < 100; i++) { // Cancel up to 100 slots just to be safe (24*60/15 = 96)
-        await _notificationsPlugin.cancel(id: (baseId * 1000) + i);
-      }
-      map.remove(uuid);
-      await prefs.setString('notification_uuid_map', jsonEncode(map));
-    }
-  }
-
-  // Reschedule from cached list
-  Future<void> rescheduleAll(List<dynamic> reminders) async {
-    // First cancel all existing to avoid duplicates
+  Future<void> disableReminder() async {
     await _notificationsPlugin.cancelAll();
-
-    for (final r in reminders) {
-      final uuid = r['id'] as String;
-      final timeStr = r['reminderTime'] as String;
-      final interval = r['intervalMinutes'] as int;
-      await scheduleReminder(uuid, timeStr, interval);
-    }
   }
 }

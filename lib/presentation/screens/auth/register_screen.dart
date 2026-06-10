@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:teguk/data/repositories/auth_repository.dart';
 
 class RegisterScreen extends StatefulWidget {
-  final String initialRole;
-
-  const RegisterScreen({super.key, this.initialRole = 'User'});
+  const RegisterScreen({super.key});
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -26,7 +24,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   bool _isLoading = false;
   bool _obscurePassword = true;
-  late String _selectedRole;
 
   // Pilihan untuk User
   String _selectedGender = 'Male';
@@ -40,7 +37,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   void initState() {
     super.initState();
-    _selectedRole = widget.initialRole;
   }
 
   @override
@@ -60,33 +56,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _isLoading = true);
 
     try {
-      Map<String, dynamic> result;
-
-      if (_selectedRole == 'User') {
-        result = await _authRepository.registerUser(
-          fullName: _fullNameController.text.trim(),
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
-          age: int.parse(_ageController.text),
-          weight: double.parse(_weightController.text),
-          gender: _selectedGender,
-          activityLevel: _selectedActivityLevel,
-          environmentCondition: _selectedEnvironment,
-        );
-      } else {
-        result = await _authRepository.registerExpert(
-          fullName: _fullNameController.text.trim(),
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
-        );
-      }
+      final result = await _authRepository.registerUser(
+        fullName: _fullNameController.text.trim(),
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        age: int.parse(_ageController.text),
+        weight: double.parse(_weightController.text),
+        gender: _selectedGender,
+        activityLevel: _selectedActivityLevel,
+        environmentCondition: _selectedEnvironment,
+      );
 
       if (!mounted) return;
 
       if (result['success'] == true) {
-        if (_selectedRole == 'User') {
-          await _authRepository.setProfileSetupComplete(false);
-        }
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -134,28 +117,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Toggle Role
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  padding: const EdgeInsets.all(4),
-                  child: Row(
-                    children: [
-                      _buildToggleButton('User', Icons.person_outline),
-                      _buildToggleButton('HealthExpert', Icons.medical_services_outlined),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 8),
                 Center(
                   child: Text(
-                    _selectedRole == 'User'
-                        ? 'Daftar sebagai pengguna biasa'
-                        : 'Daftar sebagai tenaga kesehatan (perlu persetujuan admin)',
+                    'Isi data diri Anda dengan lengkap',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -203,46 +169,44 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 16),
 
                 // Field khusus User
-                if (_selectedRole == 'User') ...[
-                  _buildLabel('Umur'),
-                  _buildTextField(_ageController, 'Contoh: 22', Icons.cake_outlined,
-                      keyboardType: TextInputType.number,
-                      validator: (v) => v!.isEmpty ? 'Umur tidak boleh kosong' : null),
-                  const SizedBox(height: 16),
+                _buildLabel('Umur'),
+                _buildTextField(_ageController, 'Contoh: 22', Icons.cake_outlined,
+                    keyboardType: TextInputType.number,
+                    validator: (v) => v!.isEmpty ? 'Umur tidak boleh kosong' : null),
+                const SizedBox(height: 16),
 
-                  _buildLabel('Berat Badan (kg)'),
-                  _buildTextField(_weightController, 'Contoh: 65', Icons.monitor_weight_outlined,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      validator: (v) => v!.isEmpty ? 'Berat badan tidak boleh kosong' : null),
-                  const SizedBox(height: 16),
+                _buildLabel('Berat Badan (kg)'),
+                _buildTextField(_weightController, 'Contoh: 65', Icons.monitor_weight_outlined,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    validator: (v) => v!.isEmpty ? 'Berat badan tidak boleh kosong' : null),
+                const SizedBox(height: 16),
 
-                  _buildLabel('Jenis Kelamin'),
-                  _buildDropdown(
-                    value: _selectedGender,
-                    items: _genderOptions,
-                    icon: Icons.wc_outlined,
-                    onChanged: (v) => setState(() => _selectedGender = v!),
-                  ),
-                  const SizedBox(height: 16),
+                _buildLabel('Jenis Kelamin'),
+                _buildDropdown(
+                  value: _selectedGender,
+                  items: _genderOptions,
+                  icon: Icons.wc_outlined,
+                  onChanged: (v) => setState(() => _selectedGender = v!),
+                ),
+                const SizedBox(height: 16),
 
-                  _buildLabel('Tingkat Aktivitas'),
-                  _buildDropdown(
-                    value: _selectedActivityLevel,
-                    items: _activityOptions,
-                    icon: Icons.directions_run_outlined,
-                    onChanged: (v) => setState(() => _selectedActivityLevel = v!),
-                  ),
-                  const SizedBox(height: 16),
+                _buildLabel('Tingkat Aktivitas'),
+                _buildDropdown(
+                  value: _selectedActivityLevel,
+                  items: _activityOptions,
+                  icon: Icons.directions_run_outlined,
+                  onChanged: (v) => setState(() => _selectedActivityLevel = v!),
+                ),
+                const SizedBox(height: 16),
 
-                  _buildLabel('Kondisi Lingkungan'),
-                  _buildDropdown(
-                    value: _selectedEnvironment,
-                    items: _environmentOptions,
-                    icon: Icons.thermostat_outlined,
-                    onChanged: (v) => setState(() => _selectedEnvironment = v!),
-                  ),
-                  const SizedBox(height: 16),
-                ],
+                _buildLabel('Kondisi Lingkungan'),
+                _buildDropdown(
+                  value: _selectedEnvironment,
+                  items: _environmentOptions,
+                  icon: Icons.thermostat_outlined,
+                  onChanged: (v) => setState(() => _selectedEnvironment = v!),
+                ),
+                const SizedBox(height: 16),
 
                 const SizedBox(height: 8),
 
@@ -279,36 +243,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildToggleButton(String role, IconData icon) {
-    final isSelected = _selectedRole == role;
-    final label = role == 'User' ? 'User' : 'Health Expert';
 
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => setState(() => _selectedRole = role),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFF2196F3) : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 16, color: isSelected ? Colors.white : Colors.grey[600]),
-              const SizedBox(width: 6),
-              Text(label,
-                  style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: isSelected ? Colors.white : Colors.grey[600])),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _buildLabel(String text) {
     return Padding(

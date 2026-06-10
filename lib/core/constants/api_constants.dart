@@ -26,6 +26,7 @@ class ApiConstants {
   static final String consultation = '$baseUrl/api/consultation';
   static final String consultationMessage = '$baseUrl/api/consultation/message';
   static final String consultationMy = '$baseUrl/api/consultation/my-consultations';
+  static final String consultationIncoming = '$baseUrl/api/consultation/incoming-consultations';
 
   // Health Expert
   static final String healthExpertList = '$baseUrl/api/healthexpert/list';

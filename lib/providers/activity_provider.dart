@@ -1,57 +1,38 @@
 import 'package:flutter/material.dart';
-import 'package:teguk/data/repositories/activity_repository.dart';
 import 'package:teguk/data/services/pedometer_service.dart';
 
 class ActivityProvider extends ChangeNotifier {
-  final _repository = ActivityRepository();
-
-  List<dynamic> _activities = [];
+  Map<String, int> _history = {};
   bool _isLoading = false;
   int _currentSteps = 0;
 
-  List<dynamic> get activities => _activities;
+  Map<String, int> get history => _history;
   bool get isLoading => _isLoading;
   int get currentSteps => _currentSteps;
 
+  final PedometerService _pedometer = PedometerService();
+
   ActivityProvider() {
     _initPedometer();
+    fetchHistory();
   }
 
   void _initPedometer() {
-    final pedometer = PedometerService();
-    pedometer.startListening();
-    pedometer.stepStream.listen((steps) {
+    _pedometer.startListening();
+    _pedometer.stepStream.listen((steps) {
       _currentSteps = steps;
       notifyListeners();
     });
   }
 
-  Future<void> fetchActivities() async {
+  Future<void> fetchHistory() async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      final list = await _repository.getActivities();
-      if (list != null) _activities = list;
+      _history = await _pedometer.getHistory();
     } catch (e) {
-      debugPrint('Error fetching activities: $e');
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<bool> addActivity(String type, String level) async {
-    _isLoading = true;
-    notifyListeners();
-
-    try {
-      final success = await _repository.addActivity(type, level);
-      if (success) await fetchActivities();
-      return success;
-    } catch (e) {
-      debugPrint('Error adding activity: $e');
-      return false;
+      debugPrint('Error fetching step history: $e');
     } finally {
       _isLoading = false;
       notifyListeners();

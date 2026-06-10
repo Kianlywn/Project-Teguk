@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:teguk/data/repositories/auth_repository.dart';
-import 'package:teguk/data/repositories/health_expert_repository.dart';
 import 'package:teguk/data/repositories/user_repository.dart';
 import 'package:teguk/presentation/screens/auth/register_screen.dart';
 import 'package:teguk/presentation/screens/dashboard/dashboard_screen.dart';
-import 'package:teguk/presentation/screens/expert/expert_application_screen.dart';
-import 'package:teguk/presentation/screens/expert/expert_dashboard_screen.dart';
 import 'package:teguk/presentation/screens/admin/admin_dashboard_screen.dart';
-import 'package:teguk/presentation/screens/onboarding/profile_setup_screen.dart';
+
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -48,14 +45,7 @@ class _LoginScreenState extends State<LoginScreen> {
         final role = result['role'] as String;
         final fullname = result['fullname'] as String;
 
-        if (role == 'User') {
-          final profileDone = await _authRepository.isProfileSetupComplete();
-          if (!mounted) return;
-          if (!profileDone) {
-            Navigator.pushReplacement(context,
-                MaterialPageRoute(builder: (_) => const ProfileSetupScreen()));
-            return;
-          }
+        if (role == 'User' || role == 'HealthExpert') {
           final profile = await UserRepository().getProfile();
           if (!mounted) return;
           final waterTarget = profile != null
@@ -70,8 +60,6 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
           );
-        } else if (role == 'HealthExpert') {
-          await _handleExpertRouting(fullname);
         } else if (role == 'Admin') {
           Navigator.pushReplacement(
             context,
@@ -89,51 +77,6 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) _showError('Tidak dapat terhubung ke server');
     } finally {
       if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _handleExpertRouting(String fullname) async {
-    try {
-      final application = await HealthExpertRepository().getMyApplication();
-      if (!mounted) return;
-
-      if (application == null) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ExpertApplicationScreen(expertName: fullname),
-          ),
-        );
-      } else {
-        final status = application['status'] as String? ?? '';
-        if (status == 'Approved') {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => ExpertDashboardScreen(expertName: fullname),
-            ),
-          );
-        } else {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => ExpertApplicationScreen(
-                expertName: fullname,
-                existingApplication: application,
-              ),
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ExpertApplicationScreen(expertName: fullname),
-          ),
-        );
-      }
     }
   }
 
