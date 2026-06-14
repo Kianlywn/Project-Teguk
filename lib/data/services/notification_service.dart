@@ -44,7 +44,7 @@ class NotificationService {
     }
 
     const AndroidInitializationSettings initSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+        AndroidInitializationSettings('launcher_icon');
     
     const InitializationSettings initSettings = InitializationSettings(
       android: initSettingsAndroid,
@@ -69,7 +69,7 @@ class NotificationService {
       channelDescription: 'Pengingat rutin untuk minum air',
       importance: Importance.max,
       priority: Priority.high,
-      icon: '@mipmap/ic_launcher',
+      icon: 'launcher_icon',
     );
     const NotificationDetails platformChannelSpecifics =
         NotificationDetails(android: androidPlatformChannelSpecifics);

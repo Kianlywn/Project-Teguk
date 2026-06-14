@@ -13,10 +13,19 @@ import 'package:teguk/providers/admin_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: '.env');
   
-  await NotificationService().init();
-  await _checkHourlyReminder();
+  try {
+    await dotenv.load(fileName: '.env');
+  } catch (e) {
+    debugPrint('Error loading .env file: $e');
+  }
+  
+  try {
+    await NotificationService().init();
+    await _checkHourlyReminder();
+  } catch (e) {
+    debugPrint('Error initializing notification service: $e');
+  }
 
   runApp(
     MultiProvider(
